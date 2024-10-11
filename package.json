@@ -1,0 +1,28 @@
+{
+    "name": "preact-render-to-stream",
+    "version": "0.0.1",
+    "main": "dist/defer.js",
+    "type": "module",
+    "engines": {
+        "node": ">=22.8"
+    },
+    "scripts": {
+        "build": "rm -rf dist && tsc",
+        "dev": "tsc -w"
+    },
+    "keywords": [],
+    "author": "Olof Bjerke",
+    "license": "MIT",
+    "description": "Render preact to an html stream with out of order deferred slots",
+    "types": "dist/defer.d.ts",
+    "peerDependencies": {
+        "preact": "10.x",
+        "preact-render-to-string": "6.x"
+    },
+    "devDependencies": {
+        "@types/node": "^22.7.5",
+        "preact": "^10.24.2",
+        "preact-render-to-string": "^6.5.11",
+        "typescript": "^5.6.3"
+    }
+}

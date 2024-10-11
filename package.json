@@ -1,11 +1,11 @@
 {
     "name": "preact-render-to-stream",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "main": "dist/defer.js",
     "type": "module",
     "repository": {
-      "type": "git",
-      "url": "https://github.com/olofbjerke/preact-render-to-stream"
+        "type": "git",
+        "url": "https://github.com/olofbjerke/preact-render-to-stream"
     },
     "engines": {
         "node": ">=22.8"

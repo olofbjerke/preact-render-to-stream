@@ -1,6 +1,6 @@
 {
     "name": "preact-render-to-stream",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "main": "dist/defer.js",
     "type": "module",
     "repository": {

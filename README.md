@@ -2,13 +2,25 @@
 
 Render JSX and [Preact](https://github.com/preactjs/preact) components to an HTML stream with out of order deferred elements.
 
+**Demo**: https://preact-render-to-stream.olofbjerke.com
+
 If you use preact for dynamic server side rendering (SSR), then this package can help with First Contentful Paint, as it can defer parts of the UI to be streamed in later in the HTTP response.
 
 The package uses the `preact-render-to-string` package to render the HTML and a special context to defer parts of the UI until their lazy data is ready to be rendered.
 
-This package is inspired by the Flecks library for Ruby.
+This package is inspired by the [Flecks](https://github.com/phlex-ruby/flecks) library for Ruby.
 
-## Example
+The package is written in TypeScript and is published as a ES module with type definitions.
+
+## Installation
+
+```
+npm install preact-render-to-stream
+```
+
+## Usage
+
+### No server framework
 ```tsx
 
 import http from "node:http";
@@ -25,7 +37,7 @@ const server = http.createServer(async (req, res) => {
             </header>
             <main>
                 <Defer
-                    promise={new Promise<string>((res) => setTimeout(() => res("Got data"), 1500))}
+                    promise={new Promise((res) => setTimeout(() => res("Got data"), 1500))}
                     fallback={() => <p>Loading</p>}
                     render={(d) => <p>{d}</p>}
                 />
@@ -44,3 +56,33 @@ const server = http.createServer(async (req, res) => {
 server.listen(8000);
 
 ```
+
+## API
+
+### `toStream(head: VNode, body: VNode, endOfBody?: VNode): ReadableStream<unknown>`
+
+Renders the given JSX elements to an HTML stream.
+
+### `<Defer />` component
+
+Defers rendering of the given component until the `promise` is resolved. It adds a `data-deferred-slot` attribute to the fallback component, so that the deferred component can be inserted into the DOM later.
+
+#### Props
+
+- `promise: Promise<T>`: The promise to wait for.
+- `fallback: VNode`: The component to render while the promise is pending.
+- `render: (data: T) => VNode`: The component to render when the promise is resolved.
+- `onError: (error: unknown) => VNode`: The component to render when the promise is rejected.
+
+### `<DefaultHead />` component
+
+Renders a set of default head tags and any additional tags passed as children.
+
+#### Props
+
+- `title: string`: The title of the page.
+- `children: ComponentChildren`: Any tags to render inside the head.
+
+### License
+
+MIT

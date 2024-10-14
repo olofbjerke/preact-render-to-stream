@@ -1,5 +1,8 @@
 # preact-render-to-stream
 
+[![NPM
+version](https://img.shields.io/npm/v/preact-render-to-stream.svg?style=flat)](https://www.npmjs.com/package/preact-render-to-stream)
+
 Render JSX and [Preact](https://github.com/preactjs/preact) components to an HTML stream with out of order deferred elements.
 
 **Demo**: https://preact-render-to-stream.olofbjerke.com
@@ -21,8 +24,8 @@ npm install preact-render-to-stream
 ## Usage
 
 ### No server framework
-```tsx
 
+```tsx
 import http from "node:http";
 import { toStream, DefaultHead, Defer } from "preact-render-to-stream";
 
@@ -54,6 +57,52 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(8000);
+```
+
+### [Fastify](https://github.com/fastify/fastify)
+
+Fastify accepts a stream as response, so we can use the `toStream` function to render the HTML stream and pass it to the reply.
+
+```tsx
+import Fastify from "fastify";
+import { toStream, DefaultHead, Defer } from "preact-render-to-stream";
+
+const fastify = Fastify({
+    logger: true,
+});
+
+fastify.get("/", async function (request, reply) {
+    reply.header("Content-Type", "text/html");
+
+    const stream = toStream(
+        <DefaultHead title="preact-render-to-stream demo">
+            <link rel="stylesheet" async href="/public/main.css" />
+            <script async type="module" src="/public/main.js"></script>
+        </DefaultHead>,
+        <>
+            <header>
+                <h1>preact-render-to-stream demo</h1>
+            </header>
+            <main>
+                <Defer
+                    promise={new Promise<string>((res) => setTimeout(() => res("Got data"), 1500))}
+                    fallback={() => <p>Loading</p>}
+                    render={(d) => <p>{d}</p>}
+                />
+                <p>This is shown even though the previous component is slow.</p>
+            </main>
+        </>
+    );
+
+    return reply.send(stream);
+});
+
+fastify.listen({ port: 8001 }, function (err, address) {
+    if (err) {
+        fastify.log.error(err);
+        process.exit(1);
+    }
+});
 
 ```
 
@@ -69,10 +118,10 @@ Defers rendering of the given component until the `promise` is resolved. It adds
 
 #### Props
 
-- `promise: Promise<T>`: The promise to wait for.
-- `fallback: VNode`: The component to render while the promise is pending.
-- `render: (data: T) => VNode`: The component to render when the promise is resolved.
-- `onError: (error: unknown) => VNode`: The component to render when the promise is rejected.
+-   `promise: Promise<T>`: The promise to wait for.
+-   `fallback: VNode`: The component to render while the promise is pending.
+-   `render: (data: T) => VNode`: The component to render when the promise is resolved.
+-   `onError: (error: unknown) => VNode`: The component to render when the promise is rejected.
 
 ### `<DefaultHead />` component
 
@@ -80,8 +129,8 @@ Renders a set of default head tags and any additional tags passed as children.
 
 #### Props
 
-- `title: string`: The title of the page.
-- `children: ComponentChildren`: Any tags to render inside the head.
+-   `title: string`: The title of the page.
+-   `children: ComponentChildren`: Any tags to render inside the head.
 
 ### License
 

@@ -7,6 +7,8 @@ Render JSX and [Preact](https://github.com/preactjs/preact) components to an HTM
 
 **Demo**: https://preact-render-to-stream.olofbjerke.com
 
+**Note**: This is still an experimental package and the API is not stable yet.
+
 If you use preact for dynamic server side rendering (SSR), then this package can help with First Contentful Paint, as it can defer parts of the UI to be streamed in later in the HTTP response.
 
 The package uses the `preact-render-to-string` package to render the HTML and a special context to defer parts of the UI until their lazy data is ready to be rendered.

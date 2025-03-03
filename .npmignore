@@ -1,0 +1,4 @@
+*.test.tsx
+*.test.js
+*.test.d.ts
+*.test.js.map

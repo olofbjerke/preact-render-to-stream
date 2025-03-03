@@ -4,6 +4,8 @@ import { ComponentChildren, createContext, VNode } from "preact";
 import { renderToStringAsync } from "preact-render-to-string";
 import { useContext } from "preact/hooks";
 import { baseTemplate, createSlotTemplate, BaseTemplate, TemplateParts, visibleBytesForSafari } from "./template.js";
+import { lazy, Suspense } from "preact/compat";
+import { isTimeoutResult, timeoutPromise } from "./timeout.js";
 
 type DeferredSlot = {
     promise: Promise<unknown>;
@@ -13,6 +15,9 @@ type DeferredSlot = {
 
 interface DeferredSlots {
     add(data: DeferredSlot): string;
+    settings: {
+        timeout: number;
+    };
 }
 
 type WithChildren<T = {}> = T & {
@@ -60,7 +65,43 @@ interface DeferProps<T> {
  * @returns A temporary element with the {@link DeferProps.fallback } content.
  */
 export function Defer<T>({ promise, fallback, render, onError }: DeferProps<T>) {
-    let id = useContext(deferredSlotsContext).add({
+    let Pending = createPendingComponent<T>(promise, fallback, render, onError);
+
+    return (
+        <Suspense fallback={fallback()}>
+            <Pending />
+        </Suspense>
+    );
+}
+
+function createPendingComponent<T>(
+    promise: Promise<T>,
+    fallback: () => ComponentChildren,
+    render: (data: T) => VNode,
+    onError: (error: any) => VNode
+) {
+    const context = useContext(deferredSlotsContext);
+    let tp = timeoutPromise(context.settings.timeout);
+
+    let racePromise: Promise<() => VNode> = Promise.race([promise, tp])
+        .then((res) => () => {
+            if (isTimeoutResult(res)) {
+                return <DeferredSlot promise={promise} fallback={fallback} render={render} onError={onError} />;
+            }
+
+            return render(res as T);
+        })
+        .catch((err) => {
+            return () => onError(err);
+        });
+
+    return lazy(() => racePromise);
+}
+
+export function DeferredSlot<T>({ promise, fallback, render, onError }: DeferProps<T>) {
+    const context = useContext(deferredSlotsContext);
+
+    let id = context.add({
         promise,
         onError,
         render,
@@ -97,7 +138,7 @@ async function* rendererIterator(head: VNode, body: VNode, endOfBody?: VNode) {
     let template = htmlGenerator(baseTemplate, {
         visibleBytesForSafari,
         head: renderToStringAsync(head),
-        body: renderToStringAsync(<Root context={deferredSlots}>{body}</Root>),
+        body: renderToStringAsync(<Root context={{ ...deferredSlots, settings: { timeout: 10 } }}>{body}</Root>),
         deferredSlots,
         endOfBody: endOfBody ? renderToStringAsync(endOfBody) : "",
     });

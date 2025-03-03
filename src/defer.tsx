@@ -31,10 +31,32 @@ const deferredSlotsContext = createContext<DeferredSlots>(null);
  * @param head - The head content.
  * @param body - The body content.
  * @param endOfBody - Append content after all deferred slots.
+ * @deprecated Use {@link toIterator} instead.
  * @returns A readable html stream that can be sent over http.
  */
 export function toStream(head: VNode, body: VNode, endOfBody?: VNode) {
-    return ReadableStream.from(rendererIterator(head, body, endOfBody));
+    return ReadableStream.from(rendererIterator({ head, endOfBody, timeout: 10 }, body));
+}
+
+/**
+ * Creates a async iterator of the VNode html output.
+ * @param settings - The render settings.
+ * @param body - The body content.
+ * @returns A async generator html stream that can be sent over http.
+ */
+export function toIterator(settings: Settings, body: VNode) {
+    return rendererIterator(settings, body);
+}
+
+export interface Settings {
+    /** The head content. */
+    head: VNode;
+
+    /** Append content after all deferred slots in the html.*/
+    endOfBody?: VNode;
+
+    /** Timeout used to allow inlining deferred content if the promise is resolved faster than the timeout. Default is 10ms.  */
+    timeout?: number;
 }
 
 /** Props for the {@link Defer} component */
@@ -132,15 +154,15 @@ export function DefaultHead({
     );
 }
 
-async function* rendererIterator(head: VNode, body: VNode, endOfBody?: VNode) {
+async function* rendererIterator(settings: Settings, body: VNode) {
     let deferredSlots = createDeferredSlotsContext();
 
     let template = htmlGenerator(baseTemplate, {
         visibleBytesForSafari,
-        head: renderToStringAsync(head),
-        body: renderToStringAsync(<Root context={{ ...deferredSlots, settings: { timeout: 10 } }}>{body}</Root>),
+        head: renderToStringAsync(settings.head ?? <DefaultHead />),
+        body: renderToStringAsync(<Root context={{ ...deferredSlots, settings: { timeout: settings.timeout ?? 10 } }}>{body}</Root>),
         deferredSlots,
-        endOfBody: endOfBody ? renderToStringAsync(endOfBody) : "",
+        endOfBody: settings.endOfBody ? renderToStringAsync(settings.endOfBody) : "",
     });
 
     for await (const part of template) {

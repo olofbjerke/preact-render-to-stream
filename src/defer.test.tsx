@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert";
 
-import { Defer, toIterator } from "./defer.js";
+import { Defer, toStream } from "./defer.js";
 import { Suspense, lazy } from "preact/compat";
 import { VNode } from "preact";
 
@@ -116,10 +116,10 @@ test("Stream awaits suspense lazy component", async (t) => {
 });
 
 function render(content: VNode, timeout = 10) {
-    return toIterator({ head: <head />, timeout }, <div>{content}</div>);
+    return toStream({ head: <head />, timeout }, <div>{content}</div>);
 }
 
-async function collectIterator(stream: AsyncGenerator<unknown, void, unknown>) {
+async function collectIterator(stream: ReadableStream<unknown>) {
     let content = "";
 
     for await (const chunk of stream) {

@@ -35,7 +35,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": "text/html" });
 
     const stream = toStream(
-        <DefaultHead />,
+        { head: <DefaultHead /> },
         <>
             <header>
                 <h1>preact-render-to-stream demo</h1>
@@ -77,10 +77,14 @@ fastify.get("/", async function (request, reply) {
     reply.header("Content-Type", "text/html");
 
     const stream = toStream(
-        <DefaultHead title="preact-render-to-stream demo">
-            <link rel="stylesheet" async href="/public/main.css" />
-            <script async type="module" src="/public/main.js"></script>
-        </DefaultHead>,
+        {
+            head: (
+                <DefaultHead title="preact-render-to-stream demo">
+                    <link rel="stylesheet" async href="/public/main.css" />
+                    <script async type="module" src="/public/main.js"></script>
+                </DefaultHead>
+            ),
+        },
         <>
             <header>
                 <h1>preact-render-to-stream demo</h1>
@@ -105,12 +109,11 @@ fastify.listen({ port: 8001 }, function (err, address) {
         process.exit(1);
     }
 });
-
 ```
 
 ## API
 
-### `toStream(head: VNode, body: VNode, endOfBody?: VNode): ReadableStream<unknown>`
+### `toStream(settings: Settings, body: VNode): ReadableStream<unknown>`
 
 Renders the given JSX elements to an HTML stream.
 
@@ -120,10 +123,10 @@ Defers rendering of the given component until the `promise` is resolved. It adds
 
 #### Props
 
--   `promise: Promise<T>`: The promise to wait for.
--   `fallback: VNode`: The component to render while the promise is pending.
--   `render: (data: T) => VNode`: The component to render when the promise is resolved.
--   `onError: (error: unknown) => VNode`: The component to render when the promise is rejected.
+- `promise: Promise<T>`: The promise to wait for.
+- `fallback: VNode`: The component to render while the promise is pending.
+- `render: (data: T) => VNode`: The component to render when the promise is resolved.
+- `onError: (error: unknown) => VNode`: The component to render when the promise is rejected.
 
 ### `<DefaultHead />` component
 
@@ -131,8 +134,8 @@ Renders a set of default head tags and any additional tags passed as children.
 
 #### Props
 
--   `title: string`: The title of the page.
--   `children: ComponentChildren`: Any tags to render inside the head.
+- `title: string`: The title of the page.
+- `children: ComponentChildren`: Any tags to render inside the head.
 
 ### License
 

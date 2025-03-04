@@ -28,24 +28,12 @@ const deferredSlotsContext = createContext<DeferredSlots>(null);
 
 /**
  * Creates a readable stream of the VNode tree.
- * @param head - The head content.
- * @param body - The body content.
- * @param endOfBody - Append content after all deferred slots.
- * @deprecated Use {@link toIterator} instead.
- * @returns A readable html stream that can be sent over http.
- */
-export function toStream(head: VNode, body: VNode, endOfBody?: VNode) {
-    return ReadableStream.from(rendererIterator({ head, endOfBody, timeout: 10 }, body));
-}
-
-/**
- * Creates a async iterator of the VNode html output.
  * @param settings - The render settings.
  * @param body - The body content.
- * @returns A async generator html stream that can be sent over http.
+ * @returns A readable html stream that can be sent over http.
  */
-export function toIterator(settings: Settings, body: VNode) {
-    return rendererIterator(settings, body);
+export function toStream(settings: Settings, body: VNode) {
+    return ReadableStream.from(rendererIterator(settings, body));
 }
 
 export interface Settings {

@@ -1,20 +1,21 @@
 import { ReadableStream } from "node:stream/web";
 
-import { ComponentChildren, createContext, VNode } from "preact";
+import { Attributes, Component, ComponentChild, ComponentChildren, createContext, Ref, VNode } from "preact";
 import { renderToStringAsync } from "preact-render-to-string";
 import { useContext } from "preact/hooks";
 import { baseTemplate, createSlotTemplate, BaseTemplate, TemplateParts, visibleBytesForSafari } from "./template.js";
 import { lazy, Suspense } from "preact/compat";
 import { isTimeoutResult, timeoutPromise } from "./timeout.js";
 
-type DeferredSlot = {
+type DeferredSlotData = {
+    context: any;
     promise: Promise<unknown>;
     render(data: unknown): VNode;
     onError(data: unknown): VNode;
 };
 
 interface DeferredSlots {
-    add(data: DeferredSlot): string;
+    add(data: DeferredSlotData): string;
     settings: {
         timeout: number;
     };
@@ -84,6 +85,41 @@ export function Defer<T>({ promise, fallback, render, onError }: DeferProps<T>) 
     );
 }
 
+// Preact class component that wraps the current context to its children
+
+class ContextProvider extends Component<{ context: any }> {
+    getChildContext() {
+        return this.props.context;
+    }
+
+    render(props?: { children?: ComponentChildren }): ComponentChild {
+        return props.children;
+    }
+}
+
+class DeferredSlot<T> extends Component<DeferProps<T>> {
+    render(
+        { promise, onError, render, fallback }: DeferProps<T>,
+        state?: Readonly<{}>,
+        preactContext?: any
+    ): ComponentChild {
+        const slotContext = useContext(deferredSlotsContext);
+
+        let id = slotContext.add({
+            context: preactContext,
+            promise,
+            onError,
+            render,
+        });
+
+        return (
+            <div style="display: contents" data-defferred-slot={id}>
+                {fallback()}
+            </div>
+        );
+    }
+}
+
 function createPendingComponent<T>(
     promise: Promise<T>,
     fallback: () => ComponentChildren,
@@ -106,22 +142,6 @@ function createPendingComponent<T>(
         });
 
     return lazy(() => racePromise);
-}
-
-export function DeferredSlot<T>({ promise, fallback, render, onError }: DeferProps<T>) {
-    const context = useContext(deferredSlotsContext);
-
-    let id = context.add({
-        promise,
-        onError,
-        render,
-    });
-
-    return (
-        <div style="display: contents" data-defferred-slot={id}>
-            {fallback()}
-        </div>
-    );
 }
 
 /** Default head content */
@@ -148,7 +168,9 @@ async function* rendererIterator(settings: Settings, body: VNode) {
     let template = htmlGenerator(baseTemplate, {
         visibleBytesForSafari,
         head: renderToStringAsync(settings.head ?? <DefaultHead />),
-        body: renderToStringAsync(<Root context={{ ...deferredSlots, settings: { timeout: settings.timeout ?? 10 } }}>{body}</Root>),
+        body: renderToStringAsync(
+            <Root context={{ ...deferredSlots, settings: { timeout: settings.timeout ?? 10 } }}>{body}</Root>
+        ),
         deferredSlots,
         endOfBody: settings.endOfBody ? renderToStringAsync(settings.endOfBody) : "",
     });
@@ -202,7 +224,7 @@ function createDeferredSlotsContext() {
     const chunkTemplateResults: string[] = [];
 
     return {
-        add(deferredSlot: DeferredSlot) {
+        add(deferredSlot: DeferredSlotData) {
             queueSize++;
             const slotId = `slot-${idCounter++}`;
 
@@ -214,7 +236,9 @@ function createDeferredSlotsContext() {
             return slotId;
 
             async function addResult(result: VNode) {
-                let renderedString = await renderToStringAsync(result);
+                let renderedString = await renderToStringAsync(
+                    <ContextProvider context={deferredSlot.context}>{result}</ContextProvider>
+                );
                 chunkTemplateResults.push(createSlotTemplate(slotId, renderedString));
                 queueSize--;
                 notifyResult?.();

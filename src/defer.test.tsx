@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert";
 
 import { Defer, toStream } from "./defer.js";
-import { Suspense, lazy } from "preact/compat";
-import { VNode } from "preact";
+import { Suspense, lazy, useContext } from "preact/compat";
+import { ComponentChildren, createContext, VNode } from "preact";
 
 test("fast stream contains only render result", async (t) => {
     let p = promiseWithResolver();
@@ -113,6 +113,68 @@ test("Stream awaits suspense lazy component", async (t) => {
     let content = await collectIterator(stream);
     assert.doesNotMatch(content, /<span>suspense<\/span>/);
     assert.match(content, /<div>loaded<\/div>/);
+});
+
+const testContext = createContext(null);
+function useTestContext() {
+    let current = useContext(testContext);
+    if (!current) {
+        throw new Error("no context");
+    }
+
+    return current;
+}
+
+function UsesContext({ children }: { children: ComponentChildren }) {
+    let value = useTestContext();
+    return (
+        <div>
+            Context: {value} {children}
+        </div>
+    );
+}
+
+function nestedContext(
+    text: string,
+    promiseCallback: (p: ReturnType<typeof promiseWithResolver>) => void,
+    assertCb: (output: string) => void
+) {
+    test(text, async (t) => {
+        let p = promiseWithResolver<() => VNode>();
+
+        let stream = render(
+            <testContext.Provider value="test">
+                <UsesContext>First</UsesContext>
+                <Defer
+                    promise={p.promise}
+                    render={(a) => <UsesContext>Result: {a}</UsesContext>}
+                    fallback={() => <UsesContext>Loading</UsesContext>}
+                    onError={() => <UsesContext>Error</UsesContext>}
+                />
+            </testContext.Provider>
+        );
+
+        let contentPromise = collectIterator(stream);
+        await new Promise((resolve) => setTimeout(resolve, 40));
+
+        promiseCallback(p);
+
+        let content = await contentPromise;
+
+        assertCb(content);
+    });
+}
+
+nestedContext("Stream passes context down into rendered pieces", (p) => {
+    p.resolve(() => <>"Resolve"</>);
+}, (content) => {
+    assert.match(content, /<div>Context: test First<\/div>/);
+});
+
+nestedContext("Stream passes context down into rendered pieces when rejected", (p) => {
+    p.reject(() => <>"Resolve"</>);
+}, (content) => {
+    assert.match(content, /<div>Context: test Error<\/div>/);
 });
 
 function render(content: VNode, timeout = 10) {

@@ -14,7 +14,7 @@
         "build": "rm -rf dist && tsc",
         "dev": "tsc -w",
         "test": "tsc && node --test",
-        "test:dev": "node --test --watch --test-reporter tap"
+        "test:dev": "node --test --watch --test-reporter tap dist/*.test.js"
     },
     "keywords": [],
     "author": "Olof Bjerke",
@@ -27,6 +27,7 @@
     },
     "devDependencies": {
         "@types/node": "^22.7.5",
+        "htm": "^3.1.1",
         "preact": "^10.24.2",
         "preact-render-to-string": "^6.5.11",
         "typescript": "^5.6.3"

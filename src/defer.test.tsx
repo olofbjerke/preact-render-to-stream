@@ -4,6 +4,7 @@ import assert from "node:assert";
 import { Defer, toStream } from "./defer.js";
 import { Suspense, lazy, useContext } from "preact/compat";
 import { ComponentChildren, createContext, VNode } from "preact";
+import { collectIterator } from "./collectIterator.js";
 
 test("fast stream contains only render result", async (t) => {
     let p = promiseWithResolver();
@@ -165,30 +166,28 @@ function nestedContext(
     });
 }
 
-nestedContext("Stream passes context down into rendered pieces", (p) => {
-    p.resolve(() => <>"Resolve"</>);
-}, (content) => {
-    assert.match(content, /<div>Context: test First<\/div>/);
-});
+nestedContext(
+    "Stream passes context down into rendered pieces",
+    (p) => {
+        p.resolve(() => <>"Resolve"</>);
+    },
+    (content) => {
+        assert.match(content, /<div>Context: test First<\/div>/);
+    }
+);
 
-nestedContext("Stream passes context down into rendered pieces when rejected", (p) => {
-    p.reject(() => <>"Resolve"</>);
-}, (content) => {
-    assert.match(content, /<div>Context: test Error<\/div>/);
-});
+nestedContext(
+    "Stream passes context down into rendered pieces when rejected",
+    (p) => {
+        p.reject(() => <>"Resolve"</>);
+    },
+    (content) => {
+        assert.match(content, /<div>Context: test Error<\/div>/);
+    }
+);
 
 function render(content: VNode, timeout = 10) {
     return toStream({ head: <head />, timeout }, <div>{content}</div>);
-}
-
-async function collectIterator(stream: ReadableStream<unknown>) {
-    let content = "";
-
-    for await (const chunk of stream) {
-        content += chunk;
-    }
-
-    return content;
 }
 
 function promiseWithResolver<T = string>() {

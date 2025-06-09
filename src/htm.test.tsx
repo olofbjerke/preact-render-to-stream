@@ -4,6 +4,7 @@ import assert from "node:assert";
 import { DefaultHead, Defer, toStream } from "./defer.js";
 import { VNode } from "preact";
 import { html } from "htm/preact";
+import { collectIterator } from "./collectIterator.js";
 
 describe("HTM", () => {
     test("htm stream contains only render result", async (t) => {
@@ -46,15 +47,7 @@ describe("HTM", () => {
         return toStream({ head: html`<${DefaultHead} />` }, vnode);
     }
 
-    async function collectIterator(stream: ReadableStream<unknown>) {
-        let content = "";
-
-        for await (const chunk of stream) {
-            content += chunk;
-        }
-
-        return content;
-    }
+    
 
     function promiseWithResolver<T = string>() {
         let resolve: (value: T) => void;
@@ -67,3 +60,4 @@ describe("HTM", () => {
         return { promise, resolve, reject };
     }
 });
+

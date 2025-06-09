@@ -29,38 +29,39 @@ const deferredSlotsContext = createContext<DeferredSlots>(null);
  * Creates a readable stream of the VNode tree.
  * @param settings - The render settings.
  * @param body - The body content.
- * @returns A readable html stream that can be sent over http.
+ * @returns A readable byte stream that can be sent over http.
  */
 export function toStream(settings: Settings, body: VNode) {
-    return createStreamFromAsyncIterator(rendererIterator(settings, body));
+    return createByteStreamFromAsyncIterator(rendererIterator(settings, body));
 }
 
-function createStreamFromAsyncIterator(asyncIterator: AsyncGenerator<unknown, void, unknown>) {
-    const iterator = asyncIterator[Symbol.asyncIterator]();
-
-    return new ReadableStream({
-        async pull(controller) {
-            try {
-                const { value, done } = await iterator.next();
-
-                if (done) {
-                    controller.close();
-                } else {
-                    controller.enqueue(value);
-                }
-            } catch (error) {
-                controller.error(error);
-            }
-        },
-
-        // @ts-ignore
-        cancel(reason: any) {
-            // Clean up if the stream is cancelled
-            if (iterator.return) {
-                return iterator.return();
-            }
-        },
-    });
+function createByteStreamFromAsyncIterator(asyncIterator: AsyncGenerator<unknown, void, unknown>) {
+  const iterator = asyncIterator[Symbol.asyncIterator]();
+  const encoder = new TextEncoder();
+  
+  return new ReadableStream({
+    async pull(controller) {
+      try {
+        const { value, done } = await iterator.next();
+        
+        if (done) {
+          controller.close();
+        } else {
+          const bytes = encoder.encode(value as string);
+          controller.enqueue(bytes);
+        }
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+    
+    // @ts-ignore
+    cancel() {
+      if (iterator.return) {
+        return iterator.return();
+      }
+    }
+  });
 }
 
 export interface Settings {

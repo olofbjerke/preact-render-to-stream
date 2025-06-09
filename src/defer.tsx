@@ -1,6 +1,4 @@
-import { ReadableStream } from "node:stream/web";
-
-import { Attributes, Component, ComponentChild, ComponentChildren, createContext, Ref, VNode } from "preact";
+import { Component, ComponentChild, ComponentChildren, createContext, Ref, VNode } from "preact";
 import { renderToStringAsync } from "preact-render-to-string";
 import { useContext } from "preact/hooks";
 import { baseTemplate, createSlotTemplate, BaseTemplate, TemplateParts, visibleBytesForSafari } from "./template.js";
@@ -34,7 +32,35 @@ const deferredSlotsContext = createContext<DeferredSlots>(null);
  * @returns A readable html stream that can be sent over http.
  */
 export function toStream(settings: Settings, body: VNode) {
-    return ReadableStream.from(rendererIterator(settings, body));
+    return createStreamFromAsyncIterator(rendererIterator(settings, body));
+}
+
+function createStreamFromAsyncIterator(asyncIterator: AsyncGenerator<unknown, void, unknown>) {
+    const iterator = asyncIterator[Symbol.asyncIterator]();
+
+    return new ReadableStream({
+        async pull(controller) {
+            try {
+                const { value, done } = await iterator.next();
+
+                if (done) {
+                    controller.close();
+                } else {
+                    controller.enqueue(value);
+                }
+            } catch (error) {
+                controller.error(error);
+            }
+        },
+
+        // @ts-ignore
+        cancel(reason: any) {
+            // Clean up if the stream is cancelled
+            if (iterator.return) {
+                return iterator.return();
+            }
+        },
+    });
 }
 
 export interface Settings {

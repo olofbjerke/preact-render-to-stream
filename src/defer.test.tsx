@@ -116,6 +116,28 @@ test("Stream awaits suspense lazy component", async (t) => {
     assert.match(content, /<div>loaded<\/div>/);
 });
 
+test("Stream awaits suspense in head", async (t) => {
+    let p = promiseWithResolver<() => VNode>();
+    let LazyComponent = lazy(() => p.promise);
+    
+    let stream = toStream(
+        {
+            head: (
+                <Suspense fallback={<title>suspense</title>}>
+                    <LazyComponent />
+                </Suspense>
+            ),
+        },
+        <div>Default</div>
+    );
+
+    p.resolve(() => <title>loaded</title>); 
+
+    let content = await collectIterator(stream);
+    assert.doesNotMatch(content, /<title>suspense<\/title>/);
+    assert.match(content, /<title>loaded<\/title>/);
+});
+
 const testContext = createContext(null);
 function useTestContext() {
     let current = useContext(testContext);

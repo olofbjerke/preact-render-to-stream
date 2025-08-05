@@ -2,7 +2,7 @@
 const noWidthSpace = "​".repeat(512);
 export const visibleBytesForSafari = `<span aria-hidden="true" style=";user-select: none; position:absolute;">${noWidthSpace}</span>`;
 
-export const baseTemplate = html`<!DOCTYPE html>
+export const baseTemplate: BaseTemplate = html`<!DOCTYPE html>
     <html lang="en">
         <head>
             ${"head"}
@@ -32,7 +32,33 @@ export function createSlotTemplate(id: string, htmlStr: string): string {
         </script> `;
 }
 
-export type BaseTemplate = ReturnType<typeof html>;
+
+export function parseTemplateString(template: string) : BaseTemplate {
+    const slots: (keyof TemplateParts)[] = [];
+    const templateParts: string[] = [];
+
+    const regex = /\{\{([^}]+)\}\}/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(template)) !== null) {
+        templateParts.push(template.slice(lastIndex, match.index));
+        slots.push(match[1] as keyof TemplateParts);
+        lastIndex = regex.lastIndex;
+    }
+
+    templateParts.push(template.slice(lastIndex));
+
+    return {
+        templateParts,
+        slots,
+    };
+}
+
+export interface BaseTemplate {
+    templateParts: readonly string[];
+    slots: readonly (keyof TemplateParts)[];
+}
 
 export interface TemplateParts {
     head: unknown;

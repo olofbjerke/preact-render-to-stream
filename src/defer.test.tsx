@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert";
 
-import { Defer, toStream } from "./defer.js";
+import { DefaultHead, Defer, toStream } from "./defer.js";
 import { Suspense, lazy, useContext } from "preact/compat";
 import { ComponentChildren, createContext, VNode } from "preact";
 import { collectIterator } from "./collectIterator.js";
@@ -136,6 +136,20 @@ test("Stream awaits suspense in head", async (t) => {
     let content = await collectIterator(stream);
     assert.doesNotMatch(content, /<title>suspense<\/title>/);
     assert.match(content, /<title>loaded<\/title>/);
+});
+
+test("Uses template when provided.", async (t) => {
+    let stream = toStream(
+        {
+            template: "<html>{{body}}</html>",
+            head: <DefaultHead />,
+        },
+        <div>Hello</div>
+    );
+
+    let content = await collectIterator(stream);
+    
+    assert.equal(content, "<html><div>Hello</div></html>");
 });
 
 const testContext = createContext(null);

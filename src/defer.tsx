@@ -1,7 +1,7 @@
 import { Component, ComponentChild, ComponentChildren, createContext, Ref, VNode } from "preact";
 import { renderToStringAsync } from "preact-render-to-string";
 import { useContext } from "preact/hooks";
-import { baseTemplate, createSlotTemplate, BaseTemplate, TemplateParts, visibleBytesForSafari } from "./template.js";
+import { baseTemplate, createSlotTemplate, BaseTemplate, TemplateParts, visibleBytesForSafari, parseTemplateString } from "./template.js";
 import { lazy, Suspense } from "preact/compat";
 import { isTimeoutResult, timeoutPromise } from "./timeout.js";
 
@@ -36,35 +36,52 @@ export function toStream(settings: Settings, body: VNode) {
 }
 
 function createByteStreamFromAsyncIterator(asyncIterator: AsyncGenerator<unknown, void, unknown>) {
-  const iterator = asyncIterator[Symbol.asyncIterator]();
-  const encoder = new TextEncoder();
-  
-  return new ReadableStream({
-    async pull(controller) {
-      try {
-        const { value, done } = await iterator.next();
-        
-        if (done) {
-          controller.close();
-        } else {
-          const bytes = encoder.encode(value as string);
-          controller.enqueue(bytes);
-        }
-      } catch (error) {
-        controller.error(error);
-      }
-    },
-    
-    // @ts-ignore
-    cancel() {
-      if (iterator.return) {
-        return iterator.return();
-      }
-    }
-  });
+    const iterator = asyncIterator[Symbol.asyncIterator]();
+    const encoder = new TextEncoder();
+
+    return new ReadableStream({
+        async pull(controller) {
+            try {
+                const { value, done } = await iterator.next();
+
+                if (done) {
+                    controller.close();
+                } else {
+                    const bytes = encoder.encode(value as string);
+                    controller.enqueue(bytes);
+                }
+            } catch (error) {
+                controller.error(error);
+            }
+        },
+
+        // @ts-ignore
+        cancel() {
+            if (iterator.return) {
+                return iterator.return();
+            }
+        },
+    });
 }
 
 export interface Settings {
+    /** 
+     * HTML template with {{head}}, {{visibleBytesForSafari}}, {{body}}, {{deferredSlots}}, {{endOfBody}}  
+     * @example
+     * ```html
+     * <!DOCTYPE html>
+     * <html>
+     *     <head>
+     *         {{head}}
+     *     </head>
+     *     <body>
+     *        {{visibleBytesForSafari}} {{body}} {{deferredSlots}} {{endOfBody}}
+     *   </body>
+     * </html>
+     * ```
+     */
+    template?: string;
+
     /** The head content. */
     head: VNode;
 
@@ -192,7 +209,13 @@ export function DefaultHead({
 async function* rendererIterator(settings: Settings, body: VNode) {
     let deferredSlots = createDeferredSlotsContext();
 
-    let template = htmlGenerator(baseTemplate, {
+    let htmlTemplate = baseTemplate;
+    if (settings.template) {
+       
+        htmlTemplate = parseTemplateString(settings.template);
+    }
+
+    let template = htmlGenerator(htmlTemplate, {
         visibleBytesForSafari,
         head: renderToStringAsync(settings.head ?? <DefaultHead />),
         body: renderToStringAsync(
@@ -301,3 +324,4 @@ function hasIterator(obj: {
 }): obj is { [Symbol.asyncIterator]: () => AsyncIterator<unknown> } {
     return !!obj[Symbol.asyncIterator];
 }
+
